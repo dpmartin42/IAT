@@ -1,0 +1,7 @@
+export(cleanIAT)
+export(plotIIV)
+export(plotIndVar)
+export(plotItemErr)
+export(plotItemVar)
+import(data.table)
+import(ggplot2)

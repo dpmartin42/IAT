@@ -1,0 +1,35 @@
+\name{plotIIV}
+\alias{plotIIV}
+\title{Plot intraindividual variability of reaction time}
+\usage{
+  plotIIV(myData, dataType, blockName, trialBlocks,
+    sessionID, trialNumber, trialLatency)
+}
+\arguments{
+  \item{myData}{The raw dataframe to be used}
+
+  \item{dataType}{A string of "raw" for no cleaning, or
+  "clean" for cleaned data (no error trials, RT < 10,000ms,
+  and RT > 180ms)}
+
+  \item{blockName}{A string of the variable name for the
+  blocks}
+
+  \item{trialBlocks}{A vector of the four essential blocks
+  in the seven-block IAT (i.e., B3, B4, B6, and B7).}
+
+  \item{sessionID}{A string of the variable name
+  identifying each unique participant.}
+
+  \item{trialNumber}{A string of the variable identifying
+  the trial number.}
+
+  \item{trialLatency}{A String of the variable name for the
+  latency of each trial.}
+}
+\description{
+  This function uses ggplot2 to plot intraindividual
+  variability in reaction time, faceted by the four
+  essential blocks.
+}
+
