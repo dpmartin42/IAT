@@ -31,7 +31,7 @@ plotItemErr <- function(myData, blockName, trialBlocks, sessionID, itemName, tri
   
   myMean <- mean(byItemErr$propErrors)
   
-  p <- ggplot(byItemErr, aes(x = Item, y = propErrors)) + geom_bar(fill = "dark gray") + geom_hline(aes(yintercept = mean(propErrors)), size = 1.5)
+  p <- ggplot(byItemErr, aes(x = Item, y = propErrors)) + geom_bar(fill = "dark gray", stat = "identity") + geom_hline(aes(yintercept = mean(propErrors)), size = 1.5)
   p <- p + coord_flip() + theme_bw() 
   suppressMessages(suppressWarnings(print(p)))
   
