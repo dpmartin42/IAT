@@ -4,8 +4,8 @@ Description: Contains a function to implement the standard D-Scoring algorithm
     (Greenwald, Banaji, & Nosek, 2003) for Implicit Association Test (IAT)
     data, as well as various other functions to produce plots of IAT data.
 Version: 0.2
-Author: Dan Martin <dm4zz@virginia.edu>
-Maintainer: Dan Martin <dm4zz@virginia.edu>
+Author: Dan Martin <dpmartin42@gmail.com>
+Maintainer: Dan Martin <dpmartin42@gmail.com>
 Depends:
     R (>= 2.15.3)
 Imports:
