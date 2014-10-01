@@ -1,10 +1,3 @@
-#' IAT.
-#'
-#' @name IAT
-#' @docType package
-#' @import dplyr ggplot2
-NULL
-
 #' Sample Gender Stereotype Implicit Association Test data
 #'
 #' @name IATData
