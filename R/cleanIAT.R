@@ -47,13 +47,14 @@
 #'                             vError = 1, vExtreme = 2, vStd = 1)
 #' 
 #' myDScore <- rbind(myDScoreCongFirst, myDScoreCongSec)
-#'                             
+#'                                                       
 #' @import dplyr
 #' @export
 
 cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, trialError, vError, vExtreme, vStd){
   
   # To appease global variable check
+  
   SESSION_ID <- NULL; TRIAL_LATENCY <- NULL; BLOCK_NAME <- NULL; total <- NULL; TRIAL_ERROR <- NULL;
   blockPairs <- NULL; MBLOCK2 <- NULL; MBLOCK3 <- NULL; MBLOCK5 <- NULL; MBLOCK6 <- NULL; 
   FASTM <- NULL; SUBEXCL <- NULL; myBlockMean <- NULL; DIFF1 <- NULL; DIFF2 <- NULL;
