@@ -45,7 +45,8 @@
 #'                             trialLatency = "TRIAL_LATENCY",
 #'                             trialError = "TRIAL_ERROR",
 #'                             vError = 1, vExtreme = 2, vStd = 1)
-#'                             myDScore <- rbind(myDScoreCongFirst, myDScoreCongSec)
+#' 
+#' myDScore <- rbind(myDScoreCongFirst, myDScoreCongSec)
 #'                             
 #' @import dplyr
 #' @export
