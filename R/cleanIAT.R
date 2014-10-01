@@ -1,28 +1,3 @@
-#' Sample Gender Stereotype Implicit Association Test data
-#'
-#' @name IATData
-#' @docType data
-#' @description A dataframe containing data from a Gender Stereotype Implicit Association Test. Data was taken from college students in a 
-#' differential equations classroom taught by a female professor.
-#' @format A dataframe with 11792 observations of 16 variables (88 students in total)
-#' 
-#' \itemize{
-#'   \item BLOCK_NAME_S: string of blocknames
-#'   \item BLOCK_PAIRING_DEFINITION_S: string of block pairings
-#'   \item TRIAL_NAME_S: word/picture used in sorting trial
-#'   \item SESSION_ID: ID of participant
-#'   \item TRIAL_NUMBER: number of trial within block
-#'   \item TRIAL_ERROR: indicates whether trial was an error (1 = YES)
-#'   \item TRIAL_LATENCY: reaction time for trial
-#'   \item isCongruentFirst: indicates if stereotype congruent blocks came first
-#' }
-#' 
-#' 
-#' @author Dan Martin {dm4zz@@virginia.edu}
-#' @references \url{http://projectimplicit.net/fpi/researchers.html}
-#' @keywords IAT Implicit Association Test
-NULL
-
 #' Clean IAT data using the updated D-Scoring algorithm
 #' 
 #' This macro will transform a dataframe with trial latencies (stored as one line per trial) 
@@ -46,7 +21,32 @@ NULL
 #' standard deviation for combined blocks (correct trial only), while A indicates standard deviations for combined blocks (all trials). M (mean), E (percent error),
 #' N (number of trials used), and F (percent fast responses), are reported for each block included in the original dataframe. 
 #' @references \href{http://faculty.washington.edu/agg/pdf/GB&N.JPSP.2003.pdf}{Understanding and Using the Implicit Association Test: I. An Improved Scoring Algorithm}
-#' @example R/cleanIATExample.R
+#' @examples
+#' # Get Ps who recieve Math-Male sorting task in first blocks
+#' 
+#' myDataCongFirst <- IATData[IATData$isCongruentFirst == 1, ]
+#' 
+#' myDScoreCongFirst <- cleanIAT(myData = myDataCongFirst,
+#'                               blockName = "BLOCK_NAME_S",
+#'                               trialBlocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
+#'                               sessionID = "SESSION_ID",
+#'                               trialLatency = "TRIAL_LATENCY",
+#'                               trialError = "TRIAL_ERROR",
+#'                               vError = 1, vExtreme = 2, vStd = 1)
+#' 
+#' # Get Ps who recieve Math-Female sorting task in first blocks
+#' 
+#' myDataCongSec <- IATData[IATData$isCongruentFirst == 0, ]
+#' 
+#' myDScoreCongSec <- cleanIAT(myData = myDataCongSec,
+#'                             blockName = "BLOCK_NAME_S",
+#'                             trialBlocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
+#'                             sessionID = "SESSION_ID",
+#'                             trialLatency = "TRIAL_LATENCY",
+#'                             trialError = "TRIAL_ERROR",
+#'                             vError = 1, vExtreme = 2, vStd = 1)
+#'                             myDScore <- rbind(myDScoreCongFirst, myDScoreCongSec)
+#'                             
 #' @import dplyr
 #' @export
 
