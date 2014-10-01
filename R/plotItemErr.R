@@ -5,34 +5,35 @@
 #' essential blocks.
 #' 
 #' @param myData The raw dataframe to be used
-#' @param blockName A string of the variable name for the blocks
-#' @param trialBlocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
 #' @param sessionID A string of the variable name identifying each unique participant.
 #' @param itemName A string of the variable identifying the items
 #' @param trialLatency A string of the variable name for the latency of each trial.
 #' @param trialError A string of the variable name identifying whether a trial was an error or not (1 = error)
-#' @import ggplot2 data.table
+#' @import ggplot2 dplyr
 #' @export
 
-plotItemErr <- function(myData, blockName, trialBlocks, sessionID, itemName, trialLatency, trialError){
-  
+plotItemErr <- function(myData, sessionID, itemName, trialLatency, trialError){
+
   # to appease global variable check
-  Item <- NULL; propErrors <- NULL
+  ITEM <- NULL; propErrors <- NULL; TRIAL_LATENCY <- NULL; TRIAL_ERROR <- NULL
   
-  myDataTable <- data.table(myData)
+  names(myData)[names(myData) == trialLatency] <- "TRIAL_LATENCY"
+  names(myData)[names(myData) == trialError] <- "TRIAL_ERROR"
+  names(myData)[names(myData) == sessionID] <- "SESSION_ID"
+  names(myData)[names(myData) == itemName] <- "ITEM"
   
-  byItemErr <- myDataTable[get(trialLatency) > 180 & get(trialLatency) < 10000,
-                           list(propErrors = sum(get(trialError) == 1)/length(get(trialError))),
-                           by = list(Item = get(itemName))]
+  myTbl <- group_by(tbl_df(myData), ITEM)
   
-  byItemErr <- as.data.frame(byItemErr)
+  byItemErr <- filter(myTbl, TRIAL_LATENCY > 180 & TRIAL_LATENCY < 10000) %>%
+    summarise(propErrors = sum(TRIAL_ERROR == 1)/length(TRIAL_ERROR))
   
-  byItemErr$Item <- factor(byItemErr$Item, levels = byItemErr[order(byItemErr$propErrors),]$Item)
+  byItemErr$ITEM <- factor(byItemErr$ITEM, levels = byItemErr[order(byItemErr$propErrors),]$ITEM)
   
   myMean <- mean(byItemErr$propErrors)
   
-  p <- ggplot(byItemErr, aes(x = Item, y = propErrors)) + geom_bar(fill = "dark gray", stat = "identity") + geom_hline(aes(yintercept = mean(propErrors)), size = 1.5)
-  p <- p + coord_flip() + theme_bw() 
+  p <- ggplot(byItemErr, aes(x = ITEM, y = propErrors)) + geom_bar(fill = "dark gray", stat = "identity")
+  p <- p + geom_hline(aes(yintercept = mean(propErrors)), size = 1.5)
+  p <- p + coord_flip() + theme_bw() + labs(x = "Item", y = "Proportion Errors")
   suppressMessages(suppressWarnings(print(p)))
   
 }

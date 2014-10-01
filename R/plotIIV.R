@@ -3,10 +3,10 @@
 #' This function uses ggplot2 to plot intraindividual variability in reaction time, faceted by the four essential blocks. 
 #' 
 #' @param myData The raw dataframe to be used
+#' @param sessionID A string of the variable name identifying each unique participant.
 #' @param dataType A string of "raw" for no cleaning, or "clean" for cleaned data (no error trials, RT < 10,000ms, and RT > 180ms)
 #' @param blockName A string of the variable name for the blocks
 #' @param trialBlocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
-#' @param sessionID A string of the variable name identifying each unique participant.
 #' @param trialNumber A string of the variable identifying the trial number.
 #' @param trialLatency A String of the variable name for the latency of each trial.
 #' @import ggplot2

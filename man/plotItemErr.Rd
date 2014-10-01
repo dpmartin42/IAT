@@ -3,15 +3,10 @@
 \alias{plotItemErr}
 \title{Plot proportion of errors per item in the IAT}
 \usage{
-plotItemErr(myData, blockName, trialBlocks, sessionID, itemName, trialLatency,
-  trialError)
+plotItemErr(myData, sessionID, itemName, trialLatency, trialError)
 }
 \arguments{
 \item{myData}{The raw dataframe to be used}
-
-\item{blockName}{A string of the variable name for the blocks}
-
-\item{trialBlocks}{A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).}
 
 \item{sessionID}{A string of the variable name identifying each unique participant.}
 

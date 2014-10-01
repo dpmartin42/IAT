@@ -47,44 +47,60 @@ NULL
 #' N (number of trials used), and F (percent fast responses), are reported for each block included in the original dataframe. 
 #' @references \href{http://faculty.washington.edu/agg/pdf/GB&N.JPSP.2003.pdf}{Understanding and Using the Implicit Association Test: I. An Improved Scoring Algorithm}
 #' @example R/cleanIATExample.R
-#' @import data.table
+#' @import dplyr
 #' @export
 
 cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, trialError, vError, vExtreme, vStd){
   
   # To appease global variable check
+  SESSION_ID <- NULL; TRIAL_LATENCY <- NULL; BLOCK_NAME <- NULL; total <- NULL; TRIAL_ERROR <- NULL;
+  blockPairs <- NULL; MBLOCK2 <- NULL; MBLOCK3 <- NULL; MBLOCK5 <- NULL; MBLOCK6 <- NULL; 
   FASTM <- NULL; SUBEXCL <- NULL; myBlockMean <- NULL; DIFF1 <- NULL; DIFF2 <- NULL;
   IAT <- NULL; IAT1 <- NULL; IAT2 <- NULL; AS1 <- NULL; AS2 <- NULL; CS1 <- NULL; CS2 <- NULL
   
-  myDataTable <- data.table(myData)
+  # Rename variables to pass to dplyr functions
   
-  myDataTable$SUBEXCL <- 0
+  names(myData)[names(myData) == blockName] <- "BLOCK_NAME"
+  names(myData)[names(myData) == sessionID] <- "SESSION_ID"
+  names(myData)[names(myData) == trialLatency] <- "TRIAL_LATENCY"
+  
+  myTbl <- group_by(tbl_df(myData), SESSION_ID)
+  
+  myTbl$SUBEXCL <- 0
   
   # Step 1: Include data from B3, B4, B6, B7
   # Step 1 has been removed so all data is at least partially analyzed
   
   # Step 2a: Eliminate trial latencies > 10,000ms and < 0ms
   
-  myDataTableNoLong <- myDataTable[get(trialLatency) < 10000 & get(trialLatency) >= 0, ]
+  myTblNoLong <- filter(myTbl, TRIAL_LATENCY < 10000, TRIAL_LATENCY >= 0)
   
   # Step 2b: Mark subjects for whom more than 10% of trials have latencies < 300ms with a 1
   
-  myFastTable <- myDataTable[get(blockName) %in% trialBlocks,
-                             list(FASTM = sum(get(trialLatency) < 300)/length(get(trialLatency))),
-                             by = list(ID = get(sessionID))]
+  myFastTbl <- filter(myTbl, BLOCK_NAME %in% trialBlocks) %>%
+    summarise(FASTM = sum(TRIAL_LATENCY < 300)/length(TRIAL_LATENCY))
   
-  isTooFastTable <- myFastTable[FASTM > 0.10,]$ID
-  setnames(myFastTable, "ID", sessionID)
+  isTooFast <- filter(myFastTbl, FASTM > 0.10) %>%
+    select(SESSION_ID)
   
-  suppressWarnings(invisible(if(length(isTooFastTable) > 0){myDataTable[get(sessionID) %in% isTooFastTable, SUBEXCL := as.integer(1)]}))
+  if(nrow(isTooFast) > 0){
+    
+    myTbl[myTbl$SESSION_ID %in% isTooFast, ]$SUBEXCL <- 1
+    
+  }
   
   # Step 2c: Mark subjects with any missing blocks with a 2
   
-  numBlocksTable <- myDataTable[, sum(unique(get(blockName)) %in% trialBlocks), by = get(sessionID)]
+  numBlocks <- filter(myTbl, BLOCK_NAME %in% trialBlocks) %>%
+    summarise(total = length(unique(BLOCK_NAME)))
   
-  notCompleteTable <- numBlocksTable[numBlocksTable$V1 < 4, get]
+  notComplete <- filter(numBlocks, total < 4)
   
-  suppressWarnings(invisible(if(length(notCompleteTable) > 0){myDataTable[get(sessionID) %in% notCompleteTable, SUBEXCL := as.integer(2)]}))
+  if(nrow(notComplete) > 0){
+    
+    myTbl[myTbl$SESSION_ID %in% notComplete, ]$SUBEXCL <- 2
+    
+  }
   
   # Step 3: Use all trials (in the conventional algorithm) the first two trials of each
   # block would be dropped here
@@ -93,13 +109,13 @@ cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, tr
   
   if(vExtreme == 1){
     
-    myDataTableNotFast <- myDataTableNoLong
+    myTblNotFast <- group_by(myTblNoLong, SESSION_ID, BLOCK_NAME)
     
   } else if(vExtreme == 2){
     
-    myDataTableNotFast <- myDataTableNoLong[get(trialLatency) >= 400, ]
+    myTblNotFast <- group_by(filter(myTblNoLong, TRIAL_LATENCY >= 400), SESSION_ID, BLOCK_NAME)
     
-  } else stop("Please pick a value of 1 or 2 for vExtreme.")
+  }
   
   # Step 5: Compute mean of correct latencies for each block
   # If vError = 1 then means and SDs will be calculated for the entire set of latencies
@@ -113,27 +129,20 @@ cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, tr
   
   if(vError == 1){
     
-    blockMeansTable <- myDataTableNotFast[, list(M = mean(get(trialLatency)), N = length(get(trialLatency))), by = list(ID = get(sessionID), Block = get(blockName))]
+    blockMeans <- summarise(myTblNotFast, M = mean(TRIAL_LATENCY), N = length(TRIAL_LATENCY))
     
-    setnames(blockMeansTable, "Block", blockName)
+  } else if(vError == 2){
     
-  } else if (vError == 2){
+    meanReplace <- filter(myTblNotFast, TRIAL_ERROR == 0) %>%
+      summarise(blockMean = mean(TRIAL_LATENCY) + 600)
     
-    myMeanReplaceTable <- myDataTableNotFast[get(trialError) == 0, list(myBlockMean = mean(get(trialLatency)) + 600), by = list(ID = get(sessionID), block = get(blockName))]
+    mergeTbl <- merge(myTblNotFast, meanReplace, by = c(sessionID, blockName), all = TRUE)
     
-    setnames(myMeanReplaceTable, c("ID", "block"), c(sessionID, blockName))
+    myTblNotFast$tmpLatency <- myTblNotFast$TRIAL_LATENCY
     
-    myMergeTable <- merge(myDataTableNotFast, myMeanReplaceTable, by = c(sessionID, blockName), all = TRUE)
+    names(myTblNotFast)[c(14, 18)] <- c("oldLatency", trialLatency)
     
-    myDataTableNotFast$tmpLatency <- myDataTableNotFast[, get(trialLatency)]
-    
-    suppressWarnings(myDataTableNotFast[get(trialError) == 1, ]$tmpLatency <- myMergeTable[get(trialError) == 1, myBlockMean])
-    
-    setnames(myDataTableNotFast, c(trialLatency, "tmpLatency"), c("oldLatency", trialLatency))
-    
-    blockMeansTable <- myDataTableNotFast[, list(M = mean(get(trialLatency)), N = length(get(trialLatency))), by = list(ID = get(sessionID), Block = get(blockName))]
-    
-    setnames(blockMeansTable, "Block", blockName)
+    blockMeans <- summarise(myTblNotFast, M = mean(TRIAL_LATENCY), N = length(TRIAL_LATENCY))
     
   } else stop("Please pick a value of 1 or 2 for vError.")
   
@@ -141,20 +150,21 @@ cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, tr
   # If vStd is 1, the block SD is performed including error trials (corrected or not)
   # If vStd is 2, the block SD is performed on correct responses only
   
-  myDataTableNotFast$blockPairs <- as.character(myDataTableNotFast[, get(blockName)])
+  myTblNotFast$blockPairs <- as.character(myTblNotFast$BLOCK_NAME)
   
-  myDataTableNotFast[get(blockName) %in% trialBlocks[c(1,3)], ]$blockPairs <- "S1"
-  myDataTableNotFast[get(blockName) %in% trialBlocks[c(2,4)], ]$blockPairs <- "S2"
+  myTblNotFast[myTblNotFast$BLOCK_NAME %in% trialBlocks[c(1,3)], ]$blockPairs <- "S1"
+  myTblNotFast[myTblNotFast$BLOCK_NAME %in% trialBlocks[c(2,4)], ]$blockPairs <- "S2"
   
-  bloPaString <- "blockPairs"
+  myTblNotFast <- group_by(myTblNotFast, SESSION_ID, blockPairs)
   
-  allTableSDs <- merge(myDataTableNotFast[get(blockName) %in% trialBlocks, list(A = sd(get(trialLatency))), by = list(ID = get(sessionID), blockPairs = get(bloPaString))],
-                       myDataTableNotFast[get(blockName) %in% trialBlocks & get(trialError) == 0, list(C = sd(get(trialLatency))), by = list(ID = get(sessionID), blockPairs = get(bloPaString))],
-                       by = c("ID", "blockPairs"))
+  allTblSDs <- merge(filter(myTblNotFast, BLOCK_NAME %in% trialBlocks) %>% summarise(A = sd(TRIAL_LATENCY)),
+                     filter(myTblNotFast, BLOCK_NAME %in% trialBlocks & TRIAL_ERROR == 0) %>%
+                       summarise(C = sd(TRIAL_LATENCY)),
+                     by = c(sessionID, "blockPairs"))
   
-  blockMeansTableWide <- merge(reshape(allTableSDs, v.names = c("A", "C"), idvar = "ID", timevar = "blockPairs", direction = "wide", sep = ""),
-                               reshape(blockMeansTable, v.names = c("M", "N"), idvar = "ID", timevar = blockName, direction = "wide", sep = ""),
-                               by = "ID")
+  blockMeansTbl <- merge(reshape(allTblSDs, v.names = c("A", "C"), idvar = "SESSION_ID", timevar = "blockPairs", direction = "wide", sep = ""),
+                         reshape(blockMeans, v.names = c("M", "N"), idvar = "SESSION_ID", timevar = "BLOCK_NAME", direction = "wide", sep = ""),
+                         by = "SESSION_ID")
   
   # Step 7: Replace error latencies with block mean + 600ms
   # Already done in step above
@@ -167,47 +177,52 @@ cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, tr
   # Step 10: Compute the two differences B6 - B3 and B7 - B4
   # Step 11: Divide each difference by associated pooled SD from step 6
   
-  invisible(
-    if(vStd == 1){
-      
-      blockMeansTableWide[, DIFF1 := get(paste0("M", trialBlocks[3])) - get(paste0("M", trialBlocks[1]))]
-      blockMeansTableWide[, DIFF2 := get(paste0("M", trialBlocks[4])) - get(paste0("M", trialBlocks[2]))]
-      blockMeansTableWide[, IAT1 := DIFF1/AS1]
-      blockMeansTableWide[, IAT2 := DIFF2/AS2]
-      blockMeansTableWide[, IAT := (IAT1 + IAT2)/2]
-      
-    } else if(vStd == 2){
-      
-      blockMeansTableWide[, DIFF1 := get(paste0("M", trialBlocks[3])) - get(paste0("M", trialBlocks[1]))]
-      blockMeansTableWide[, DIFF2 := get(paste0("M", trialBlocks[4])) - get(paste0("M", trialBlocks[2]))]
-      blockMeansTableWide[, IAT1 := DIFF1/CS1]
-      blockMeansTableWide[, IAT2 := DIFF2/CS2]
-      blockMeansTableWide[, IAT := (IAT1 + IAT2)/2]
-      
-    } else stop("Please enter a vStd value of 1 or 2.")
-  )
-  
-  setnames(blockMeansTableWide, "ID", sessionID)
+  if(vStd == 1){
+    
+    tblResult <- 
+      mutate(blockMeansTbl,
+             DIFF1 = MBLOCK5 - MBLOCK2,
+             DIFF2 = MBLOCK6 - MBLOCK3) %>%
+      mutate(IAT1 = DIFF1/AS1,
+             IAT2 = DIFF2/AS2) %>%
+      mutate(IAT = (IAT1 + IAT2)/2)
+    
+  } else if(vStd == 2){
+    
+    tblResult <- 
+      mutate(blockMeansTbl,
+             DIFF1 = MBLOCK5 - MBLOCK2,
+             DIFF2 = MBLOCK6 - MBLOCK3) %>%
+      mutate(IAT1 = DIFF1/CS1,
+             IAT2 = DIFF2/CS2) %>%
+      mutate(IAT = (IAT1 + IAT2)/2)
+    
+  } else stop("Please enter a vStd value of 1 or 2.")
   
   ##########################
   # Create output dataframe
   ##########################
   
-  myDataTableErrFast <- myDataTable[, list(E = sum(get(trialError)/length(get(trialError))),
-                                           F = sum(get(trialLatency) < 300)/length(get(trialLatency))),
-                                    by = list(ID = get(sessionID), block = get(blockName))]
+  myTbl <- group_by(myTbl, SESSION_ID, BLOCK_NAME)
   
-  myDataTableErrFastWide <- reshape(myDataTableErrFast, v.names = c("E", "F"), idvar = "ID", timevar = "block", direction = "wide", sep = "")
-  setnames(myDataTableErrFastWide, "ID", sessionID)
+  tblErrFast <- summarise(myTbl,
+                          E = sum(TRIAL_ERROR)/length(TRIAL_ERROR),
+                          F = sum(TRIAL_LATENCY < 300)/length(TRIAL_LATENCY))
   
-  myDataTableExtras <- merge(myDataTableErrFastWide, myFastTable, by = sessionID, all = TRUE)
+  tblErrFastWide <- reshape(tblErrFast, v.names = c("E", "F"), idvar = "SESSION_ID", timevar = "BLOCK_NAME", direction = "wide", sep = "")
   
-  myDataTableExcl <- myDataTable[,list(SUBEXCL = unique(SUBEXCL)), by = list(ID = get(sessionID))]
+  tblExtras <- merge(tblErrFastWide, myFastTbl, by = sessionID, all = TRUE)
   
-  myDataTableExtras$SUBEXCL <- myDataTableExcl[,SUBEXCL]
+  myTbl <- group_by(myTbl, SESSION_ID)
   
-  myDataTableTotal <- merge(blockMeansTableWide, myDataTableExtras, by = sessionID, all = TRUE)
+  tblExcl <- summarise(myTbl, SUBEXCL = unique(SUBEXCL))
   
-  invisible(as.data.frame(myDataTableTotal))
+  tblExtras$SUBEXCL <- tblExcl$SUBEXCL
+  
+  tblTotal <- merge(tblResult, tblExtras, by = sessionID, all = TRUE)
+  
+  names(tblTotal)[names(tblTotal) == "SESSION_ID"] <- sessionID
+  
+  return(tblTotal)
   
 }
