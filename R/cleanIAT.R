@@ -1,173 +1,186 @@
 #' Clean IAT data using the updated D-Scoring algorithm
 #' 
-#' This macro will transform a dataframe with trial latencies (stored as one line per trial) 
+#' Transform a dataframe with trial latencies (stored as one line per trial) 
 #' for a standard format IAT (7 blocks) into a one line summary per subject of the IAT effect using
-#' GNB's new scoring algorithm. The goal of this functionis to prepare IAT data for subsequent analysis.
-#' However, this does not relieve the researcher from making conceptual decisions about how best to
-#' analyze IAT data.  There are decisions to make about how the function is applied, and the function
-#' does not remove participants.  All subject exclusions must be made deliberately by the researcher.
+#' the standard scoring algorithm recommended in Greenwald, Nosek, & Banaji (2003). The goal
+#' is to prepare IAT data for subsequent analysis. However, this does not relieve the researcher 
+#' from making conceptual decisions about how best to analyze IAT data. There are decisions to 
+#' make about how the function is applied, and the function does not remove participants.
+#' All subject exclusions must be made deliberately by the researcher. Note that the output of this function
+#' is identical to that of the standard SAS macro (link in reference) for all meaningful columns.
 #' 
-#' @param myData The raw dataframe to be used
-#' @param blockName A string of the variable name for the blocks
-#' @param trialBlocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
-#' @param sessionID A string of the variable name identifying each unique participant.
-#' @param trialLatency A string of the variable name for the latency of each trial.
-#' @param trialError A string of the variable name identifying whether a trial was an error or not, where 1 indicates an error.
-#' @param vError If 1 (current standard), then means are calculated for the entire set of latencies. If 2, error latencies will be replaced by the block mean + 600ms
-#' @param vExtreme If 1, then no extreme value treatment. If 2 (current standard), delete trial latencies < 400ms
-#' @param vStd If 1 (current standard), block SD is performed including error trials (corrected or not). If 2, block SD is performed on correct responses only
+#' @param my_data The raw dataframe to be used
+#' @param block_name A string of the variable name for the blocks
+#' @param trial_blocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
+#' @param session_id A string of the variable name identifying each unique participant.
+#' @param trial_latency A string of the variable name for the latency of each trial.
+#' @param trial_error A string of the variable name identifying whether a trial was an error or not, where 1 indicates an error.
+#' @param v_error If 1 (current standard), then means are calculated for the entire set of latencies. If 2, error latencies will be replaced by the block mean + 600ms
+#' @param v_extreme If 1, then no extreme value treatment. If 2 (current standard), delete trial latencies < 400ms
+#' @param v_std If 1 (current standard), block SD is performed including error trials (corrected or not). If 2, block SD is performed on correct responses only
 #' @return Outputs a dataframe that must be saved to an object. The variable IAT is the calculated D-Score for each individual. SUBEXCL notes
 #' any exclusion criteria, with 0 being inclusion data, 1 for exclusion due to fast response, and 2 for exclusion due to missing blocks. C indicates
 #' standard deviation for combined blocks (correct trial only), while A indicates standard deviations for combined blocks (all trials). M (mean), E (percent error),
 #' N (number of trials used), and F (percent fast responses), are reported for each block included in the original dataframe. 
 #' @references \href{http://faculty.washington.edu/agg/pdf/GB&N.JPSP.2003.pdf}{Understanding and Using the Implicit Association Test: I. An Improved Scoring Algorithm}
+#' @references \href{http://projectimplicit.net/nosek/papers/scoringalgorithm.sas.txt}{IAT SAS macro}
 #' @examples
 #' # Get Ps who recieve Math-Male sorting task in first blocks
 #' 
-#' myDataCongFirst <- IATData[IATData$isCongruentFirst == 1, ]
+#' cong_first <- IATData[IATData$isCongruentFirst == 1, ]
 #' 
-#' myDScoreCongFirst <- cleanIAT(myData = myDataCongFirst,
-#'                               blockName = "BLOCK_NAME_S",
-#'                               trialBlocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
-#'                               sessionID = "SESSION_ID",
-#'                               trialLatency = "TRIAL_LATENCY",
-#'                               trialError = "TRIAL_ERROR",
-#'                               vError = 1, vExtreme = 2, vStd = 1)
+#' dscore_first <- cleanIAT(my_data = cong_first,
+#'                          block_name = "BLOCK_NAME_S",
+#'                          trial_blocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
+#'                          session_id = "SESSION_ID",
+#'                          trial_latency = "TRIAL_LATENCY",
+#'                          trial_error = "TRIAL_ERROR",
+#'                          v_error = 1, v_extreme = 2, v_std = 1)
 #' 
 #' # Get Ps who recieve Math-Female sorting task in first blocks
 #' 
-#' myDataCongSec <- IATData[IATData$isCongruentFirst == 0, ]
+#' cong_second <- IATData[IATData$isCongruentFirst == 0, ]
 #' 
-#' myDScoreCongSec <- cleanIAT(myData = myDataCongSec,
-#'                             blockName = "BLOCK_NAME_S",
-#'                             trialBlocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
-#'                             sessionID = "SESSION_ID",
-#'                             trialLatency = "TRIAL_LATENCY",
-#'                             trialError = "TRIAL_ERROR",
-#'                             vError = 1, vExtreme = 2, vStd = 1)
+#' dscore_second <- cleanIAT(my_data = cong_second,
+#'                           block_name = "BLOCK_NAME_S",
+#'                           trial_blocks = c("BLOCK2", "BLOCK3", "BLOCK5", "BLOCK6"),
+#'                           session_id = "SESSION_ID",
+#'                           trial_latency = "TRIAL_LATENCY",
+#'                           trial_error = "TRIAL_ERROR",
+#'                           v_error = 1, v_extreme = 2, v_std = 1)
 #' 
-#' myDScore <- rbind(myDScoreCongFirst, myDScoreCongSec)
+#' d_score <- rbind(dscore_first, dscore_second)
 #'                                                       
-#' @import dplyr
+#' @import dplyr lazyeval
+#' @importFrom stats reshape sd
 #' @export
 
-cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, trialError, vError, vExtreme, vStd){
-  
-  # To appease global variable check
-  
-  SESSION_ID <- NULL; TRIAL_LATENCY <- NULL; BLOCK_NAME <- NULL; total <- NULL; TRIAL_ERROR <- NULL;
-  blockPairs <- NULL; MBLOCK2 <- NULL; MBLOCK3 <- NULL; MBLOCK5 <- NULL; MBLOCK6 <- NULL; 
-  FASTM <- NULL; SUBEXCL <- NULL; myBlockMean <- NULL; DIFF1 <- NULL; DIFF2 <- NULL;
-  IAT <- NULL; IAT1 <- NULL; IAT2 <- NULL; AS1 <- NULL; AS2 <- NULL; CS1 <- NULL; CS2 <- NULL
-  
-  # Rename variables to pass to dplyr functions
-  
-  names(myData)[names(myData) == blockName] <- "BLOCK_NAME"
-  names(myData)[names(myData) == sessionID] <- "SESSION_ID"
-  names(myData)[names(myData) == trialLatency] <- "TRIAL_LATENCY"
-  
-  myTbl <- group_by(tbl_df(myData), SESSION_ID)
-  
-  myTbl$SUBEXCL <- 0
+cleanIAT <- function(my_data, block_name, trial_blocks, session_id, trial_latency, trial_error, v_error, v_extreme, v_std){
   
   # Step 1: Include data from B3, B4, B6, B7
   # Step 1 has been removed so all data is at least partially analyzed
   
   # Step 2a: Eliminate trial latencies > 10,000ms and < 0ms
   
-  myTblNoLong <- filter(myTbl, TRIAL_LATENCY < 10000, TRIAL_LATENCY >= 0)
+  my_tbl <- my_data %>%
+    tbl_df() %>%
+    group_by_(session_id) %>%
+    mutate(SUBEXCL = 0) %>%
+    filter_(interp(~ x < 10000 & x >= 0, x = as.name(trial_latency)))
   
   # Step 2b: Mark subjects for whom more than 10% of trials have latencies < 300ms with a 1
   
-  myFastTbl <- filter(myTbl, BLOCK_NAME %in% trialBlocks) %>%
-    summarise(FASTM = sum(TRIAL_LATENCY < 300)/length(TRIAL_LATENCY))
-  
-  isTooFast <- filter(myFastTbl, FASTM > 0.10) %>%
-    select(SESSION_ID)
-  
-  if(nrow(isTooFast) > 0){
-    
-    myTbl[myTbl$SESSION_ID %in% isTooFast, ]$SUBEXCL <- 1
-    
-  }
+  fast_tbl <- my_tbl %>%
+    filter_(interp(~ x %in% trial_blocks, x = as.name(block_name))) %>%
+    group_by_(session_id, block_name) %>%
+    summarise_(FAST = interp(~ sum(x < 300)/length(x), x = as.name(trial_latency))) %>%
+    summarise_(FASTM = interp(~ mean(y), y = as.name("FAST")))
+              
+  my_tbl$SUBEXCL[data.frame(my_tbl)[, session_id] %in% 
+                   data.frame(filter_(fast_tbl, interp(~ z > 0.10, z = as.name("FASTM"))))[, session_id]] <- 1
   
   # Step 2c: Mark subjects with any missing blocks with a 2
   
-  numBlocks <- filter(myTbl, BLOCK_NAME %in% trialBlocks) %>%
-    summarise(total = length(unique(BLOCK_NAME)))
+  num_blocks <- my_tbl %>%
+    summarise_(total = interp(~ sum(unique(x) %in% trial_blocks), x = as.name(block_name))) %>%
+    filter_(interp(~ x < 4, x = as.name("total")))
   
-  notComplete <- filter(numBlocks, total < 4)
-  
-  if(nrow(notComplete) > 0){
-    
-    myTbl[myTbl$SESSION_ID %in% notComplete, ]$SUBEXCL <- 2
-    
-  }
-  
+  my_tbl$SUBEXCL[data.frame(my_tbl)[, session_id] %in% data.frame(num_blocks)[, session_id]] <- 2
+
   # Step 3: Use all trials (in the conventional algorithm) the first two trials of each
   # block would be dropped here
   
   # Step 4: No extreme value treatment <or> delete trial with latencies < 400ms
   
-  if(vExtreme == 1){
+  if(v_extreme == 1){
     
-    myTblNotFast <- group_by(myTblNoLong, SESSION_ID, BLOCK_NAME)
+    my_tbl_sub <- my_tbl %>%
+      group_by_(session_id, block_name)
+  
+  } else if(v_extreme == 2){
     
-  } else if(vExtreme == 2){
+    my_tbl_sub <- my_tbl %>%
+      filter_(interp(~ x >= 400, x = as.name(trial_latency))) %>%
+      group_by_(session_id, block_name)
     
-    myTblNotFast <- group_by(filter(myTblNoLong, TRIAL_LATENCY >= 400), SESSION_ID, BLOCK_NAME)
-    
-  }
+  } else stop("Please enter a v_extreme value of 1 or 2.")
   
   # Step 5: Compute mean of correct latencies for each block
-  # If vError = 1 then means and SDs will be calculated for the entire set of latencies
-  # IF vError = 2 then the algorithm will replace error trial latencies with blockmean + 600
+  # If v_error = 1 then means and SDs will be calculated for the entire set of latencies
+  # IF v_error = 2 then the algorithm will replace error trial latencies with blockmean + 600
   # (where blockmean is mean of correct responses only)
   
-  # Step 5: Compute mean of correct latencies for each block
-  # If vError = 1 then means and SDs will be calculated for the entire set of latencies
-  # IF vError = 2 then the algorithm will replace error trial latencies with blockmean + 600
-  # (where blockmean is mean of correct responses only)
+  block_speed <- my_tbl %>%
+    group_by_(session_id, block_name) %>%
+    summarise_(F = interp(~ sum(y < 300)/length(y), y = as.name(trial_latency)))
   
-  if(vError == 1){
+  block_errors <- my_tbl_sub %>%
+    group_by_(session_id, block_name) %>%
+    summarise_(E = interp(~ sum(x)/length(x), x = as.name(trial_error)))
+  
+  block_extras <- full_join(block_errors, block_speed, by = c(session_id, block_name))
+  
+  if(v_error == 1){
     
-    blockMeans <- summarise(myTblNotFast, M = mean(TRIAL_LATENCY), N = length(TRIAL_LATENCY))
+    block_means <- my_tbl_sub %>%
+      summarise_(SUBEXCL = interp(~ unique(z), z = as.name("SUBEXCL")),
+                 M = interp(~ mean(x), x = as.name(trial_latency)),
+                 N = interp(~ length(x), x = as.name(trial_latency))) %>%
+      full_join(block_extras, by = c(session_id, block_name)) %>%
+      full_join(fast_tbl, by = session_id)
     
-  } else if(vError == 2){
+  } else if(v_error == 2){
     
-    meanReplace <- filter(myTblNotFast, TRIAL_ERROR == 0) %>%
-      summarise(blockMean = mean(TRIAL_LATENCY) + 600)
+    my_tbl_sub <- my_tbl_sub %>%
+      summarise_(new_latency = interp(~ mean(x[y == 0]) + 600,
+                                      x = as.name(trial_latency),
+                                      y = as.name(trial_error))) %>%
+      full_join(my_tbl_sub, by = c(session_id, block_name))
     
-    mergeTbl <- merge(myTblNotFast, meanReplace, by = c(sessionID, blockName), all = TRUE)
+    my_tbl_sub[, trial_latency] <- ifelse(data.frame(my_tbl_sub)[, trial_error] == 0,
+                                          data.frame(my_tbl_sub)[, trial_latency],
+                                          data.frame(my_tbl_sub)[, "new_latency"])
     
-    myTblNotFast$tmpLatency <- myTblNotFast$TRIAL_LATENCY
+    my_tbl_sub$new_latency <- NULL
     
-    names(myTblNotFast)[c(14, 18)] <- c("oldLatency", trialLatency)
+    block_means <- my_tbl_sub %>%
+      group_by_(session_id, block_name) %>%
+      summarise_(SUBEXCL = interp(~ unique(z), z = as.name("SUBEXCL")),
+                 M = interp(~ mean(x), x = as.name(trial_latency)),
+                 N = interp(~ length(x), x = as.name(trial_latency))) %>%
+      full_join(block_extras, by = c(session_id, block_name)) %>%
+      full_join(fast_tbl, by = session_id)
     
-    blockMeans <- summarise(myTblNotFast, M = mean(TRIAL_LATENCY), N = length(TRIAL_LATENCY))
-    
-  } else stop("Please pick a value of 1 or 2 for vError.")
+  } else stop("Please pick a value of 1 or 2 for v_error.")
   
   # Step 6: Compute pooled SD for B3 & B6, and separately for B4 & B7.
-  # If vStd is 1, the block SD is performed including error trials (corrected or not)
-  # If vStd is 2, the block SD is performed on correct responses only
+  # If v_std is 1, the block SD is performed including error trials (corrected or not)
+  # If v_std is 2, the block SD is performed on correct responses only
   
-  myTblNotFast$blockPairs <- as.character(myTblNotFast$BLOCK_NAME)
-  
-  myTblNotFast[myTblNotFast$BLOCK_NAME %in% trialBlocks[c(1,3)], ]$blockPairs <- "S1"
-  myTblNotFast[myTblNotFast$BLOCK_NAME %in% trialBlocks[c(2,4)], ]$blockPairs <- "S2"
-  
-  myTblNotFast <- group_by(myTblNotFast, SESSION_ID, blockPairs)
-  
-  allTblSDs <- merge(filter(myTblNotFast, BLOCK_NAME %in% trialBlocks) %>% summarise(A = sd(TRIAL_LATENCY)),
-                     filter(myTblNotFast, BLOCK_NAME %in% trialBlocks & TRIAL_ERROR == 0) %>%
-                       summarise(C = sd(TRIAL_LATENCY)),
-                     by = c(sessionID, "blockPairs"))
-  
-  blockMeansTbl <- merge(reshape(allTblSDs, v.names = c("A", "C"), idvar = "SESSION_ID", timevar = "blockPairs", direction = "wide", sep = ""),
-                         reshape(blockMeans, v.names = c("M", "N"), idvar = "SESSION_ID", timevar = "BLOCK_NAME", direction = "wide", sep = ""),
-                         by = "SESSION_ID")
-  
+  my_tbl_sds <- my_tbl_sub %>%
+    filter_(interp(~ x %in% trial_blocks, x = as.name(block_name))) %>%
+    mutate_(block_pairs = interp(~ ifelse(x %in% trial_blocks[c(1, 3)], "S1", "S2"),
+                                 x = as.name(block_name))) %>%
+    group_by_(session_id, "block_pairs") %>%
+    summarise_(A = interp(~ sd(x[y == 0 | y == 1]),
+                          x = as.name(trial_latency),
+                          y = as.name(trial_error)),
+               C = interp(~ sd(x[y == 0]),
+                          x = as.name(trial_latency),
+                          y = as.name(trial_error))) %>%
+    data.frame() %>%
+    reshape(v.names = c("A", "C"),
+            idvar = session_id,
+            timevar = "block_pairs",
+            direction = "wide",
+            sep = "") %>%
+    full_join(suppressWarnings(reshape(data.frame(block_means),
+                      v.names = c("M", "N", "E", "F"),
+                      idvar = session_id,
+                      timevar = block_name,
+                      direction = "wide",
+                      sep = "")), by = session_id)
+
   # Step 7: Replace error latencies with block mean + 600ms
   # Already done in step above
   
@@ -179,52 +192,31 @@ cleanIAT <- function(myData, blockName, trialBlocks, sessionID, trialLatency, tr
   # Step 10: Compute the two differences B6 - B3 and B7 - B4
   # Step 11: Divide each difference by associated pooled SD from step 6
   
-  if(vStd == 1){
+  tbl_diff <- my_tbl_sds %>%
+    mutate_(DIFF1 = interp(~ c - a,
+                           c = as.name(paste0("M", trial_blocks[3])),
+                           a = as.name(paste0("M", trial_blocks[1]))),
+            DIFF2 = interp(~ d - b,
+                           d = as.name(paste0("M", trial_blocks[4])),
+                           b = as.name(paste0("M", trial_blocks[2]))))
+  
+  if(v_std == 1){
     
-    tblResult <- 
-      mutate(blockMeansTbl,
-             DIFF1 = MBLOCK5 - MBLOCK2,
-             DIFF2 = MBLOCK6 - MBLOCK3) %>%
-      mutate(IAT1 = DIFF1/AS1,
-             IAT2 = DIFF2/AS2) %>%
-      mutate(IAT = (IAT1 + IAT2)/2)
+    tbl_result <- tbl_diff %>%
+      mutate_(IAT1 = interp(~ DIFF1/AS1, DIFF1 = as.name("DIFF1"), AS1 = as.name("AS1")),
+              IAT2 = interp(~ DIFF2/AS2, DIFF2 = as.name("DIFF2"), AS2 = as.name("AS2"))) %>%
+      mutate_(IAT =  interp(~ (IAT1 + IAT2)/2, IAT1 = as.name("IAT1"), IAT2 = as.name("IAT2")))
+      
+  } else if(v_std == 2){
     
-  } else if(vStd == 2){
+    tbl_result <- tbl_diff %>%
+      mutate_(IAT1 = interp(~ DIFF1/CS1, DIFF1 = as.name("DIFF1"), CS1 = as.name("CS1")),
+              IAT2 = interp(~ DIFF2/CS2, DIFF2 = as.name("DIFF2"), CS2 = as.name("CS2"))) %>%
+      mutate_(IAT =  interp(~ (IAT1 + IAT2)/2, IAT1 = as.name("IAT1"), IAT2 = as.name("IAT2")))
     
-    tblResult <- 
-      mutate(blockMeansTbl,
-             DIFF1 = MBLOCK5 - MBLOCK2,
-             DIFF2 = MBLOCK6 - MBLOCK3) %>%
-      mutate(IAT1 = DIFF1/CS1,
-             IAT2 = DIFF2/CS2) %>%
-      mutate(IAT = (IAT1 + IAT2)/2)
-    
-  } else stop("Please enter a vStd value of 1 or 2.")
-  
-  ##########################
-  # Create output dataframe
-  ##########################
-  
-  myTbl <- group_by(myTbl, SESSION_ID, BLOCK_NAME)
-  
-  tblErrFast <- summarise(myTbl,
-                          E = sum(TRIAL_ERROR)/length(TRIAL_ERROR),
-                          F = sum(TRIAL_LATENCY < 300)/length(TRIAL_LATENCY))
-  
-  tblErrFastWide <- reshape(tblErrFast, v.names = c("E", "F"), idvar = "SESSION_ID", timevar = "BLOCK_NAME", direction = "wide", sep = "")
-  
-  tblExtras <- merge(tblErrFastWide, myFastTbl, by = sessionID, all = TRUE)
-  
-  myTbl <- group_by(myTbl, SESSION_ID)
-  
-  tblExcl <- summarise(myTbl, SUBEXCL = unique(SUBEXCL))
-  
-  tblExtras$SUBEXCL <- tblExcl$SUBEXCL
-  
-  tblTotal <- merge(tblResult, tblExtras, by = sessionID, all = TRUE)
-  
-  names(tblTotal)[names(tblTotal) == "SESSION_ID"] <- sessionID
-  
-  return(tblTotal)
+  } else stop("Please enter a v_std value of 1 or 2.")
+
+  return(tbl_result)
   
 }
+

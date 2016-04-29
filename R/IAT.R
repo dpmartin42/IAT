@@ -18,8 +18,7 @@
 #' }
 #' 
 #' 
-#' @author Dan Martin {dm4zz@@virginia.edu}
+#' @author Dan Martin {dpmartin42@gmail.com}
 #' @references \url{http://projectimplicit.net/fpi/researchers.html}
 #' @keywords IAT Implicit Association Test
 NULL
-

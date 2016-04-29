@@ -1,49 +1,48 @@
 #' Plot intraindividual variability of reaction time
 #' 
-#' This function uses ggplot2 to plot intraindividual variability in reaction time, faceted by the four essential blocks. 
+#' Plot intraindividual variability in reaction time, faceted by the four essential blocks. 
 #' 
-#' @param myData The raw dataframe to be used
-#' @param sessionID A string of the variable name identifying each unique participant.
-#' @param dataType A string of "raw" for no cleaning, or "clean" for cleaned data (no error trials, RT < 10,000ms, and RT > 180ms)
-#' @param blockName A string of the variable name for the blocks
-#' @param trialBlocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
-#' @param trialNumber A string of the variable identifying the trial number.
-#' @param trialLatency A String of the variable name for the latency of each trial.
+#' @param my_data The raw dataframe to be used
+#' @param session_id A string of the variable name identifying each unique participant.
+#' @param data_type A string of "raw" for no cleaning, or "clean" for cleaned data (no error trials, RT < 10,000ms, and RT > 180ms)
+#' @param block_name A string of the variable name for the blocks
+#' @param trial_blocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
+#' @param trial_number A string of the variable identifying the trial number.
+#' @param trial_latency A string of the variable name for the latency of each trial.
 #' @import ggplot2
 #' @export
 
-plotIIV <- function(myData, dataType, blockName, trialBlocks, sessionID, trialNumber, trialLatency){
+plotIIV <- function(my_data, data_type, block_name, trial_blocks, session_id, trial_number, trial_latency){
   
-  if(length(unique(myData[, sessionID])) > 100){
+  if(length(unique(my_data[, session_id])) > 100){
     
-    sampleIDs <- sample(unique(myData[, sessionID]), 100)
-    myData <- myData[myData[, sessionID] %in% sampleIDs, ]
+    sample_ids <- sample(unique(my_data[, session_id]), 100)
+    my_data <- my_data[my_data[, session_id] %in% sample_ids, ]
     warning("Your total sample size is > 100. A random subsample was taken for plotting.")
     
   }
   
-  if(dataType == "clean"){
+  if(data_type == "clean"){
     
-    myDataNew <- myData[myData[, blockName] %in% trialBlocks, ]
+    data_new <- my_data[my_data[, block_name] %in% trial_blocks, ]
     
-    myDataNew <- myDataNew[myDataNew[, trialLatency] > 180 & myDataNew[, trialLatency] < 10000, ]
+    data_new <- data_new[data_new[, trial_latency] > 180 & data_new[, trial_latency] < 10000, ]
     
-  } else if(dataType == "raw"){
+  } else if(data_type == "raw"){
     
-    myDataNew <- myData[myData[, blockName] %in% trialBlocks, ]
+    data_new <- my_data[my_data[, block_name] %in% trial_blocks, ]
     
-  } else stop("Please enter 'raw' or 'clean' for dataType.")
+  } else stop("Please enter 'raw' or 'clean' for data_type.")
   
-  myDataNew[, blockName] <- as.factor(myDataNew[, blockName])
-  myDataNew[, trialNumber] <- as.factor(myDataNew[, trialNumber])
+  data_new[, block_name] <- as.factor(data_new[, block_name])
+  data_new[, trial_number] <- as.factor(data_new[, trial_number])
   
-  stat_sum_single <- function(fun, geom ="point", colour = "black", size = 1.5, ...) {
-    stat_summary(fun.y=fun, colour = colour, geom = geom, size = size, ...)
-  }
-  
-  p <- ggplot(myDataNew, aes_string(x = trialNumber, y = trialLatency)) + geom_line(aes_string(group = sessionID), colour = "#999999")
-  p <- p + theme_bw() + stat_sum_single(mean, geom = "line", aes(group = 1), size = 1.5, colour = "black") + theme_bw()
-  p <- p + facet_grid(paste(". ~ ", blockName, sep = "")) + theme(axis.text.x = element_blank())
-  p
-  
+  ggplot(data_new, aes_string(x = trial_number, y = trial_latency)) + 
+    geom_line(aes_string(group = session_id), color = "#999999") + 
+    stat_smooth(method = "loess", aes(group = 1), size = 1.5, color = "black") +
+    facet_grid(paste(". ~ ", block_name, sep = "")) + 
+    theme(axis.text.x = element_blank()) + 
+    theme_bw()
+
 }
+
