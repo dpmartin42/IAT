@@ -11,7 +11,7 @@
 #'
 #' @param my_data The raw dataframe to be used
 #' @param block_name A string of the variable name for the blocks
-#' @param trial_blocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7).
+#' @param trial_blocks A vector of the four essential blocks in the seven-block IAT (i.e., B3, B4, B6, and B7). Note: order matters, see example.
 #' @param session_id A string of the variable name identifying each unique participant.
 #' @param trial_latency A string of the variable name for the latency of each trial.
 #' @param trial_error A string of the variable name identifying whether a trial was an error or not, where 1 indicates an error.
