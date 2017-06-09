@@ -21,7 +21,7 @@
 #' @param v_error If 1 (current standard), then means are calculated for the entire set of latencies  (but 1st four trials of each response block will be removed). If 2, error latencies will be replaced by the block mean + 600ms
 #' @param v_extreme If 1, then no extreme value treatment. If 2 (current standard), delete trials latencies > 10,000 ms,  trials latencies < 400 ms and > 2,000 ms will be recoded into 400 ms and 2,000 ms
 #' @param v_std If 1 (current standard), block SD is performed including error trials (corrected or not). If 2, block SD is performed on correct responses only
-#' @return Outputs a dataframe that must be saved to an object. The variable IAT is the calculated D-Score for each individual. SUBEXCL notes
+#' @return Outputs a dataframe that must be saved to an object. The variable BIAT is the calculated D-Score for each individual. SUBEXCL notes
 #' any exclusion criteria, with 0 being inclusion data, 1 for exclusion due to fast response, and 2 for exclusion due to missing blocks. C indicates
 #' standard deviation for combined blocks (correct trial only), while A indicates standard deviations for combined blocks (all trials). M (mean), E (percent error),
 #' N (number of trials used), and F (percent fast responses), are reported for each block included in the original dataframe.
@@ -30,9 +30,9 @@
 #' @examples
 #' # Get Ps who recieve Math-Male sorting task in first blocks
 #'
-#' cong_first <- IATData[IATData$isCongruentFirst == 1, ]
+#' cong_first <- BIATData[BIATData$isCongruentFirst == 1, ]
 #'
-#' dscore_first <- cleanIAT(my_data = cong_first,
+#' dscore_first <- cleanBIAT(my_data = cong_first,
 #'                          block_name = "BLOCK_NAME_S",
 #'                          trial_blocks = c("BLOCK3", "BLOCK5", "BLOCK2", "BLOCK4"),
 #'                          session_id = "SESSION_ID",
@@ -43,9 +43,9 @@
 #'
 #' # Get Ps who recieve Math-Female sorting task in first blocks
 #'
-#' cong_second <- IATData[IATData$isCongruentFirst == 0, ]
+#' cong_second <- BIATData[BIATData$isCongruentFirst == 0, ]
 #'
-#' dscore_second <- cleanIAT(my_data = cong_second,
+#' dscore_second <- cleanBIAT(my_data = cong_second,
 #'                           block_name = "BLOCK_NAME_S",
 #'                           trial_blocks = c("BLOCK2", "BLOCK4", "BLOCK3", "BLOCK5"),
 #'                           session_id = "SESSION_ID",
@@ -217,16 +217,16 @@ cleanBIAT <- function(my_data, block_name, trial_blocks, session_id, trial_laten
   if(v_std == 1){
 
     tbl_result <- tbl_diff %>%
-      mutate_(IAT1 = interp(~ DIFF1/AS1, DIFF1 = as.name("DIFF1"), AS1 = as.name("AS1")),
-              IAT2 = interp(~ DIFF2/AS2, DIFF2 = as.name("DIFF2"), AS2 = as.name("AS2"))) %>%
-      mutate_(IAT =  interp(~ (IAT1 + IAT2)/2, IAT1 = as.name("IAT1"), IAT2 = as.name("IAT2")))
+      mutate_(BIAT1 = interp(~ DIFF1/AS1, DIFF1 = as.name("DIFF1"), AS1 = as.name("AS1")),
+              BIAT2 = interp(~ DIFF2/AS2, DIFF2 = as.name("DIFF2"), AS2 = as.name("AS2"))) %>%
+      mutate_(BIAT =  interp(~ (BIAT1 + BIAT2)/2, BIAT1 = as.name("BIAT1"), BIAT2 = as.name("BIAT2")))
 
   } else if(v_std == 2){
 
     tbl_result <- tbl_diff %>%
-      mutate_(IAT1 = interp(~ DIFF1/CS1, DIFF1 = as.name("DIFF1"), CS1 = as.name("CS1")),
-              IAT2 = interp(~ DIFF2/CS2, DIFF2 = as.name("DIFF2"), CS2 = as.name("CS2"))) %>%
-      mutate_(IAT =  interp(~ (IAT1 + IAT2)/2, IAT1 = as.name("IAT1"), IAT2 = as.name("IAT2")))
+      mutate_(BIAT1 = interp(~ DIFF1/CS1, DIFF1 = as.name("DIFF1"), CS1 = as.name("CS1")),
+              BIAT2 = interp(~ DIFF2/CS2, DIFF2 = as.name("DIFF2"), CS2 = as.name("CS2"))) %>%
+      mutate_(BIAT =  interp(~ (BIAT1 + BIAT2)/2, BIAT1 = as.name("BIAT1"), BIAT2 = as.name("BIAT2")))
 
   } else stop("Please enter a v_std value of 1 or 2.")
 
