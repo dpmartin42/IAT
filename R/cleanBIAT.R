@@ -15,6 +15,7 @@
 #' @param block_name A string of the variable name for the blocks
 #' @param trial_blocks A vector of the four essential blocks in the five-block BIAT (i.e., B2, B3, B4, and B5). Note: order matters, see example.
 #' @param session_id A string of the variable name identifying each unique participant.
+#' @param trial_number A string of the variable name for the number(order) of each trial.
 #' @param trial_latency A string of the variable name for the latency of each trial.
 #' @param trial_error A string of the variable name identifying whether a trial was an error or not, where 1 indicates an error.
 #' @param v_error If 1 (current standard), then means are calculated for the entire set of latencies  (but 1st four trials of each response block will be removed). If 2, error latencies will be replaced by the block mean + 600ms
@@ -35,7 +36,7 @@
 #'                          block_name = "BLOCK_NAME_S",
 #'                          trial_blocks = c("BLOCK3", "BLOCK5", "BLOCK2", "BLOCK4"),
 #'                          session_id = "SESSION_ID",
-#'                           trial_number = "TRIAL_NUMBER",
+#'                          trial_number = "TRIAL_NUMBER",
 #'                          trial_latency = "TRIAL_LATENCY",
 #'                          trial_error = "TRIAL_ERROR",
 #'                          v_error = 1, v_extreme = 2, v_std = 1)
