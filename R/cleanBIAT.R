@@ -33,12 +33,12 @@
 #' cong_first <- BIATData[BIATData$isCongruentFirst == 1, ]
 #'
 #' dscore_first <- cleanBIAT(my_data = cong_first,
-#'                          block_name = "BLOCK_NAME_S",
+#'                          block_name = "block_name",
 #'                          trial_blocks = c("BLOCK3", "BLOCK5", "BLOCK2", "BLOCK4"),
-#'                          session_id = "SESSION_ID",
-#'                          trial_number = "TRIAL_NUMBER",
-#'                          trial_latency = "TRIAL_LATENCY",
-#'                          trial_error = "TRIAL_ERROR",
+#'                          session_id = "session_id",
+#'                          trial_number = "trial_number",
+#'                          trial_latency = "trial_latency",
+#'                          trial_error = "trial_error",
 #'                          v_error = 1, v_extreme = 2, v_std = 1)
 #'
 #' # Get Ps who recieve Math-Female sorting task in first blocks
@@ -46,12 +46,12 @@
 #' cong_second <- BIATData[BIATData$isCongruentFirst == 0, ]
 #'
 #' dscore_second <- cleanBIAT(my_data = cong_second,
-#'                           block_name = "BLOCK_NAME_S",
+#'                           block_name = "block_name",
 #'                           trial_blocks = c("BLOCK2", "BLOCK4", "BLOCK3", "BLOCK5"),
-#'                           session_id = "SESSION_ID",
-#'                           trial_number = "TRIAL_NUMBER",
-#'                           trial_latency = "TRIAL_LATENCY",
-#'                           trial_error = "TRIAL_ERROR",
+#'                           session_id = "session_id",
+#'                           trial_number = "trial_number",
+#'                           trial_latency = "trial_latency",
+#'                           trial_error = "trial_error",
 #'                           v_error = 1, v_extreme = 2, v_std = 1)
 #'
 #' d_score <- rbind(dscore_first, dscore_second)
